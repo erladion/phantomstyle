@@ -1,6 +1,6 @@
 #ifndef PHANTOMCOLOR_H
 #define PHANTOMCOLOR_H
-#include <QtGui/qcolor.h>
+#include <QColor>
 
 namespace Phantom {
 struct Rgb;

@@ -1,78 +1,81 @@
 #include "phantomstyle.h"
+
+#include <qdrawutil.h>
+
+#include <QAbstractScrollArea>
+#include <QApplication>
+#include <QFont>
+#include <QPainter>
+#include <QPainterPath>
+#include <QPoint>
+#include <QPolygon>
+#include <QSharedData>
+#include <QSharedPointer>
+#include <QString>
+#include <QStyleOption>
+#include <QWindow>
+#include <QtMath>
+#include <cmath>
+
 #include "phantomcolor.h"
 #include "phantomtweak.h"
-#include <QtCore/qmath.h>
-#include <QtCore/qpoint.h>
-#include <QtCore/qshareddata.h>
-#include <QtCore/qsharedpointer.h>
-#include <QtCore/qstring.h>
-#include <QtGui/qfont.h>
-#include <QtGui/qpainter.h>
-#include <QtGui/qpainterpath.h>
-#include <QtGui/qpolygon.h>
-#include <QtGui/qwindow.h>
-#include <QtWidgets/qabstractscrollarea.h>
-#include <QtWidgets/qapplication.h>
-#include <QtWidgets/qdrawutil.h>
-#include <QtWidgets/qstyleoption.h>
-#include <cmath>
 #if QT_CONFIG(combobox)
-#include <QtWidgets/qcombobox.h>
+#include <QComboBox>
 #endif
 #if QT_CONFIG(pushbutton)
-#include <QtWidgets/qpushbutton.h>
+#include <QPushButton>
 #endif
 #if QT_CONFIG(abstractbutton)
-#include <QtWidgets/qabstractbutton.h>
+#include <QAbstractButton>
 #endif
 #if QT_CONFIG(mainwindow)
-#include <QtWidgets/qmainwindow.h>
+#include <QMainWindow>
 #endif
 #if QT_CONFIG(groupbox)
-#include <QtWidgets/qgroupbox.h>
+#include <QGroupBox>
 #endif
 #if QT_CONFIG(scrollbar)
-#include <QtWidgets/qscrollbar.h>
+#include <QScrollBar>
 #endif
 #if QT_CONFIG(spinbox)
-#include <QtWidgets/qspinbox.h>
+#include <QSpinBox>
 #endif
 #if QT_CONFIG(abstractslider)
-#include <QtWidgets/qabstractslider.h>
+#include <QAbstractSlider>
 #endif
 #if QT_CONFIG(slider)
-#include <QtWidgets/qslider.h>
+#include <QSlider>
 #endif
 #if QT_CONFIG(splitter)
-#include <QtWidgets/qsplitter.h>
+#include <QSplitter>
 #endif
 #if QT_CONFIG(progressbar)
-#include <QtWidgets/qprogressbar.h>
+#include <QProgressBar>
 #endif
 #if QT_CONFIG(wizard)
-#include <QtWidgets/qwizard.h>
+#include <QWizard>
 #endif
 #if QT_CONFIG(scrollbar)
-#include <QtWidgets/qscrollbar.h>
+#include <QScrollBar>
 #endif
 #if QT_CONFIG(menu)
-#include <QtWidgets/qmenu.h>
+#include <QMenu>
 #endif
 #if QT_CONFIG(toolbar)
-#include <QtWidgets/qtoolbar.h>
+#include <QToolBar>
 #endif
 #if QT_CONFIG(toolbutton)
-#include <QtWidgets/qtoolbutton.h>
+#include <QToolButton>
 #endif
 #if QT_CONFIG(dialogbuttonbox)
-#include <QtWidgets/qdialogbuttonbox.h>
+#include <QDialogButtonBox>
 #endif
 #if QT_CONFIG(itemviews)
-#include <QtWidgets/qabstractitemview.h>
-#include <QtWidgets/qheaderview.h>
-#include <QtWidgets/qlistview.h>
-#include <QtWidgets/qtableview.h>
-#include <QtWidgets/qtreeview.h>
+#include <QAbstractItemView>
+#include <QHeaderView>
+#include <QListView>
+#include <QTableView>
+#include <QTreeView>
 #endif
 
 #ifdef BUILD_WITH_EASY_PROFILER
@@ -342,7 +345,6 @@ struct PhSwatch : public QSharedData {
   void loadFromQPalette(const QPalette& pal);
 };
 
-
 using PhSwatchPtr = QExplicitlySharedDataPointer<PhSwatch>;
 using PhCacheEntry = QPair<uint, PhSwatchPtr>;
 enum : int {
@@ -467,7 +469,8 @@ Q_ALWAYS_INLINE quint64 fastfragile_hash_qpalette(const QPalette& p) {
   // guard for it, so that it will default to a more safe definition on the
   // next guaranteed big breaking change for Qt. A warning will hopefully get
   // someone to double-check it at some point in the future.
-#warning "Verify contents and layout of QPalette::cacheKey() have not changed"
+#pragma message(                                                               \
+        "Verify contents and layout of QPalette::cacheKey() have not changed")
   QtPrivate::QHashCombine c;
   uint h = qHash(p.currentColorGroup());
   h = c(h, (uint)(x.u & 0xFFFFFFFFu));
@@ -537,7 +540,7 @@ Q_NEVER_INLINE PhSwatchPtr deep_getCachedSwatchOfQPalette(
       ptr.detach();
     }
     ptr->loadFromQPalette(qpalette);
-    cache->prepend(PhCacheEntry(key, ptr));
+    cache->insert(cache->cbegin(), PhCacheEntry(key, ptr));
     return ptr;
   } else {
     if (idx == 0) {
@@ -548,7 +551,7 @@ Q_NEVER_INLINE PhSwatchPtr deep_getCachedSwatchOfQPalette(
     // want to depend on algorithm or write this myself. Small N with a movable
     // type means it doesn't really matter in this case.
     cache->remove(idx);
-    cache->prepend(e);
+    cache->insert(cache->cbegin(), e);
     return e.second;
   }
 }
@@ -804,7 +807,7 @@ void progressBarFillRects(
     bool& outIsIndeterminate) {
   QRect ra = bar->rect;
   QRect rb = ra;
-  bool isHorizontal = bar->orientation != Qt::Vertical;
+  bool isHorizontal = bar->state.testFlag(QStyle::State_Horizontal);
   bool isInverted = bar->invertedAppearance;
   bool isIndeterminate = bar->minimum == 0 && bar->maximum == 0;
   bool isForward = !isHorizontal || bar->direction != Qt::RightToLeft;
@@ -963,7 +966,7 @@ Q_NEVER_INLINE void drawDial(const QStyleOptionSlider* option,
   painter->drawEllipse(dialRect.adjusted(-1, -1, 1, 1));
   painter->restore();
 }
-#endif //QT_CONFIG(dial)
+#endif // QT_CONFIG(dial)
 
 int fontMetricsWidth(const QFontMetrics& fontMetrics, const QString& text) {
 #if QT_VERSION < QT_VERSION_CHECK(5, 11, 0)
@@ -1319,7 +1322,6 @@ Q_NEVER_INLINE void paintBorderedRoundRect(QPainter* p, QRect rect,
 } // namespace
 } // namespace Phantom
 
-
 PhantomStylePrivate::PhantomStylePrivate() : headSwatchFastKey(0) {}
 
 PhantomStyle::PhantomStyle() : d(new PhantomStylePrivate) {
@@ -1356,7 +1358,6 @@ void PhantomStyle::drawItemText(QPainter* painter, const QRect& rect,
     painter->setPen(savedPen);
   }
 }
-
 
 void PhantomStyle::drawPrimitive(PrimitiveElement elem,
                                  const QStyleOption* option, QPainter* painter,
@@ -1396,14 +1397,14 @@ void PhantomStyle::drawPrimitive(PrimitiveElement elem,
   }
   case PE_FrameDockWidget: {
     painter->save();
-    QColor softshadow = option->palette.background().color().darker(120);
+    QColor softshadow = option->palette.window().color().darker(120);
     QRect r = option->rect;
     painter->setPen(softshadow);
     painter->drawRect(r.adjusted(0, 0, -1, -1));
     painter->setPen(QPen(option->palette.light(), 1));
     painter->drawLine(QPoint(r.left() + 1, r.top() + 1),
                       QPoint(r.left() + 1, r.bottom() - 1));
-    painter->setPen(QPen(option->palette.background().color().darker(120)));
+    painter->setPen(QPen(option->palette.window().color().darker(120)));
     painter->drawLine(QPoint(r.left() + 1, r.bottom() - 1),
                       QPoint(r.right() - 2, r.bottom() - 1));
     painter->drawLine(QPoint(r.right() - 1, r.top() + 1),
@@ -1667,10 +1668,10 @@ void PhantomStyle::drawPrimitive(PrimitiveElement elem,
       // TODO replace with new code
       const int margin = 6;
       const int offset = r.height() / 2;
-      painter->setPen(QPen(option->palette.background().color().darker(110)));
+      painter->setPen(QPen(option->palette.window().color().darker(110)));
       painter->drawLine(r.topLeft().x() + margin, r.topLeft().y() + offset,
                         r.topRight().x() - margin, r.topRight().y() + offset);
-      painter->setPen(QPen(option->palette.background().color().lighter(110)));
+      painter->setPen(QPen(option->palette.window().color().lighter(110)));
       painter->drawLine(r.topLeft().x() + margin, r.topLeft().y() + offset + 1,
                         r.topRight().x() - margin,
                         r.topRight().y() + offset + 1);
@@ -1875,7 +1876,7 @@ void PhantomStyle::drawPrimitive(PrimitiveElement elem,
     auto fropt = qstyleoption_cast<const QStyleOptionFocusRect*>(option);
     if (!fropt)
       break;
-    //### check for d->alt_down
+    // ### check for d->alt_down
     if (!(fropt->state & State_KeyboardFocusChange))
       return;
 #if QT_CONFIG(itemviews)
@@ -2219,7 +2220,7 @@ void PhantomStyle::drawControl(ControlElement element,
     QColor dimHighlight(qMin(highlight.red() / 2 + 110, 255),
                         qMin(highlight.green() / 2 + 110, 255),
                         qMin(highlight.blue() / 2 + 110, 255));
-    dimHighlight.setAlpha(widget && widget->isTopLevel() ? 255 : 80);
+    dimHighlight.setAlpha(widget && widget->isWindow() ? 255 : 80);
     painter->setRenderHint(QPainter::Antialiasing, true);
     painter->translate(0.5, 0.5);
     painter->setBrush(dimHighlight);
@@ -2231,7 +2232,7 @@ void PhantomStyle::drawControl(ControlElement element,
     painter->restore();
     break;
   }
-#endif //QT_CONFIG(rubberband)
+#endif // QT_CONFIG(rubberband)
   case CE_SizeGrip: {
     Qt::LayoutDirection dir = option->direction;
     QRect rect = option->rect;
@@ -2428,8 +2429,9 @@ void PhantomStyle::drawControl(ControlElement element,
           qMin(qMin(rect.height(), rect.width()), option->fontMetrics.height());
       auto window = widget ? widget->window()->windowHandle() : nullptr;
       QPixmap pixmap = header->icon.pixmap(
-          window, QSize(iconExtent, iconExtent),
+          QSize(iconExtent, iconExtent),
           (header->state & State_Enabled) ? QIcon::Normal : QIcon::Disabled);
+
       int pixw = (int)((qreal)pixmap.width() / pixmap.devicePixelRatio());
       QRect aligned =
           alignedRect(header->direction, QFlag(header->iconAlignment),
@@ -2559,9 +2561,10 @@ void PhantomStyle::drawControl(ControlElement element,
     QRect r = bar->rect.adjusted(2, 2, -2, -2);
     if (r.isEmpty() || !r.isValid())
       break;
-    QSize textSize = option->fontMetrics.size(Qt::TextBypassShaping, bar->text);
-    QRect textRect = QStyle::alignedRect(option->direction, Qt::AlignCenter,
-                                         textSize, option->rect);
+    int textSize = option->fontMetrics.horizontalAdvance(bar->text);
+    QRect textRect =
+        QStyle::alignedRect(option->direction, Qt::AlignCenter,
+                            QSize(textSize, textSize), option->rect);
     textRect &= r;
     if (textRect.isEmpty())
       break;
@@ -2680,18 +2683,18 @@ void PhantomStyle::drawControl(ControlElement element,
       // combo box. Probably a bug in Qt code?
       QRect checkRect = Ph::menuItemCheckRect(metrics, option->direction,
                                               itemRect, hasSubMenu);
-      Swatchy signColor = !isEnabled
-                              ? S_windowText
-                              : isSelected ? S_highlightedText : S_windowText;
+      Swatchy signColor = !isEnabled   ? S_windowText
+                          : isSelected ? S_highlightedText
+                                       : S_windowText;
       if (menuItem->checkType & QStyleOptionMenuItem::Exclusive) {
         // Radio button
         if (isChecked) {
           painter->setRenderHint(QPainter::Antialiasing);
           painter->setPen(Qt::NoPen);
-          QPalette::ColorRole textRole =
-              !isEnabled ? QPalette::Text
-                         : isSelected ? QPalette::HighlightedText
-                                      : QPalette::ButtonText;
+          QPalette::ColorRole textRole = !isEnabled ? QPalette::Text
+                                         : isSelected
+                                             ? QPalette::HighlightedText
+                                             : QPalette::ButtonText;
           painter->setBrush(option->palette.brush(
               option->palette.currentColorGroup(), textRole));
           qreal rx, ry, rw, rh;
@@ -2736,8 +2739,7 @@ void PhantomStyle::drawControl(ControlElement element,
         iconSize = combo->iconSize();
       }
 #endif
-      QWindow* window = widget ? widget->windowHandle() : nullptr;
-      QPixmap pixmap = menuItem->icon.pixmap(window, iconSize, mode, state);
+      QPixmap pixmap = menuItem->icon.pixmap(iconSize, mode, state);
       const int pixw = (int)(pixmap.width() / pixmap.devicePixelRatio());
       const int pixh = (int)(pixmap.height() / pixmap.devicePixelRatio());
       QRect pixmapRect = QStyle::alignedRect(option->direction, Qt::AlignCenter,
@@ -2746,11 +2748,11 @@ void PhantomStyle::drawControl(ControlElement element,
     }
 
     // Draw main text and mnemonic text
-    QStringRef s(&menuItem->text);
+    QStringView s(menuItem->text);
     if (!s.isEmpty()) {
       QRect textRect =
           Ph::menuItemTextRect(metrics, option->direction, itemRect, hasSubMenu,
-                               hasIcon, menuItem->tabWidth);
+                               hasIcon, menuItem->reservedShortcutWidth);
       int t = s.indexOf(QLatin1Char('\t'));
       int text_flags = Qt::AlignLeft | Qt::AlignTop | Qt::TextShowMnemonic |
                        Qt::TextDontClip | Qt::TextSingleLine;
@@ -2761,56 +2763,56 @@ void PhantomStyle::drawControl(ControlElement element,
 #endif
       painter->setPen(swatch.pen(isSelected ? S_highlightedText : S_text));
 
-      // Comment from original Qt code which did some dance with the font:
-      //
-      // font may not have any "hard" flags set. We override the point size so
-      // that when it is resolved against the device, this font will win. This
-      // is mainly to handle cases where someone sets the font on the window
-      // and then the combo inherits it and passes it onward. At that point the
-      // resolve mask is very, very weak. This makes it stonger.
+// Comment from original Qt code which did some dance with the font:
+//
+// font may not have any "hard" flags set. We override the point size so
+// that when it is resolved against the device, this font will win. This
+// is mainly to handle cases where someone sets the font on the window
+// and then the combo inherits it and passes it onward. At that point the
+// resolve mask is very, very weak. This makes it stonger.
 #if 0
       QFont font = menuItem->font;
       font.setPointSizeF(QFontInfo(menuItem->font).pointSizeF());
       painter->setFont(font);
 #endif
 
-      // My comment:
-      //
-      // What actually looks like is happening is that the qplatformtheme may
-      // have set a per-class font for menus. The QComboMenuDelegate sets the
-      // combo box's own font on the QStyleOptionMenuItem when passing it in
-      // here and when calling sizeFromContents with CT_MenuItem, but the
-      // QPainter we're called with hasn't had its font set to it -- it's still
-      // set to the QMenu/QMenuItem app fonts hash font. So if it's a menu
-      // coming from a combo box, let's just go ahead and set the font for it
-      // if it doesn't match, since that's probably what it wanted to do. I
-      // think. And as described above, we have to do the weird dance with the
-      // resolve mask... which is some internal Qt detail that we aren't
-      // supposed to have to deal with, but here we are.
-      //
-      // Ok, there's another problem, and QFusionStyle also suffers from it: in
-      // high DPI, setting the pointSizeF and setting the font again won't
-      // necessarily give us the right font (at least in Windows.) The font
-      // might have too thin of a weight, and probably other problems. So just
-      // forget about it: we'll have Phantom return 0 for the style hint that
-      // the combo box uses to determine if it should use a QMenu popup instead
-      // of a regular dropdown menu thing. The popup menu might actually be
-      // better for usability in some cases, and it's how combos work on Mac
-      // and BeOS, but it won't work anyway for editable combo boxes in Qt, and
-      // the font issues just make it not worth it. So we'll have a dropdown
-      // guy like a traditional Windows thing.
-      //
-      // If you want to try it out again, go to SH_ComboBox_Popup and have it
-      // return 1.
-      //
-      // Alternatively, we could instead have the CT_MenuItem handling code try
-      // to be aggressively clever and use the qt app font hash to look up the
-      // expected font for a QMenu and use that for calculating its metrics.
-      // Unfortunately, that probably won't work so great if the combo/menu
-      // actually wants to use custom fonts in its listing, since we'd be
-      // ignoring it. That's how UseQMenuForComboBoxPopup currently works,
-      // though it tests for Qt::WA_SetFont as an attempt at recognizing when
-      // it shouldn't use the qt font hash for QMenu.
+// My comment:
+//
+// What actually looks like is happening is that the qplatformtheme may
+// have set a per-class font for menus. The QComboMenuDelegate sets the
+// combo box's own font on the QStyleOptionMenuItem when passing it in
+// here and when calling sizeFromContents with CT_MenuItem, but the
+// QPainter we're called with hasn't had its font set to it -- it's still
+// set to the QMenu/QMenuItem app fonts hash font. So if it's a menu
+// coming from a combo box, let's just go ahead and set the font for it
+// if it doesn't match, since that's probably what it wanted to do. I
+// think. And as described above, we have to do the weird dance with the
+// resolve mask... which is some internal Qt detail that we aren't
+// supposed to have to deal with, but here we are.
+//
+// Ok, there's another problem, and QFusionStyle also suffers from it: in
+// high DPI, setting the pointSizeF and setting the font again won't
+// necessarily give us the right font (at least in Windows.) The font
+// might have too thin of a weight, and probably other problems. So just
+// forget about it: we'll have Phantom return 0 for the style hint that
+// the combo box uses to determine if it should use a QMenu popup instead
+// of a regular dropdown menu thing. The popup menu might actually be
+// better for usability in some cases, and it's how combos work on Mac
+// and BeOS, but it won't work anyway for editable combo boxes in Qt, and
+// the font issues just make it not worth it. So we'll have a dropdown
+// guy like a traditional Windows thing.
+//
+// If you want to try it out again, go to SH_ComboBox_Popup and have it
+// return 1.
+//
+// Alternatively, we could instead have the CT_MenuItem handling code try
+// to be aggressively clever and use the qt app font hash to look up the
+// expected font for a QMenu and use that for calculating its metrics.
+// Unfortunately, that probably won't work so great if the combo/menu
+// actually wants to use custom fonts in its listing, since we'd be
+// ignoring it. That's how UseQMenuForComboBoxPopup currently works,
+// though it tests for Qt::WA_SetFont as an attempt at recognizing when
+// it shouldn't use the qt font hash for QMenu.
 #if QT_CONFIG(combobox) && 0
       if (qobject_cast<const QComboBox*>(widget)) {
         QFont font = menuItem->font;
@@ -2821,16 +2823,16 @@ void PhantomStyle::drawControl(ControlElement element,
 
       // Draw mnemonic text
       if (t >= 0) {
-        QRect mnemonicR =
-            Ph::menuItemMnemonicRect(metrics, option->direction, itemRect,
-                                     hasSubMenu, menuItem->tabWidth);
-        const QStringRef textToDrawRef = s.mid(t + 1);
+        QRect mnemonicR = Ph::menuItemMnemonicRect(
+            metrics, option->direction, itemRect, hasSubMenu,
+            menuItem->reservedShortcutWidth);
+        const QStringView textToDrawRef = s.mid(t + 1);
         const QString unsafeTextToDraw = QString::fromRawData(
             textToDrawRef.constData(), textToDrawRef.size());
         painter->drawText(mnemonicR, text_flags, unsafeTextToDraw);
         s = s.left(t);
       }
-      const QStringRef textToDrawRef = s.left(t);
+      const QStringView textToDrawRef = s.left(t);
       const QString unsafeTextToDraw =
           QString::fromRawData(textToDrawRef.constData(), textToDrawRef.size());
       painter->drawText(textRect, text_flags, unsafeTextToDraw);
@@ -2878,14 +2880,12 @@ void PhantomStyle::drawControl(ControlElement element,
     if (!proxy()->styleHint(SH_UnderlineShortcut, button, widget))
       tf |= Qt::TextHideMnemonic;
     if (!button->icon.isNull()) {
-      //Center both icon and text
+      // Center both icon and text
       QRect iconRect;
       QIcon::Mode mode =
           button->state & State_Enabled ? QIcon::Normal : QIcon::Disabled;
       QIcon::State state = button->state & State_On ? QIcon::On : QIcon::Off;
-      auto window = widget ? widget->window()->windowHandle() : nullptr;
-      QPixmap pixmap =
-          button->icon.pixmap(window, button->iconSize, mode, state);
+      QPixmap pixmap = button->icon.pixmap(button->iconSize, mode, state);
       int pixmapWidth =
           (int)((qreal)pixmap.width() / pixmap.devicePixelRatio());
       int pixmapHeight =
@@ -2903,7 +2903,7 @@ void PhantomStyle::drawControl(ControlElement element,
                        textRect.y() + (textRect.height() - labelHeight) / 2,
                        pixmapWidth, pixmapHeight);
       iconRect = visualRect(button->direction, textRect, iconRect);
-      tf |= Qt::AlignLeft; //left align, we adjust the text-rect instead
+      tf |= Qt::AlignLeft; // left align, we adjust the text-rect instead
       if (button->direction == Qt::RightToLeft)
         textRect.setRight(iconRect.left() - iconSpacing);
       else
@@ -3041,7 +3041,7 @@ void PhantomStyle::drawControl(ControlElement element,
     }
     break;
   }
-#endif //QT_CONFIG(tabbar)
+#endif // QT_CONFIG(tabbar)
 #if QT_CONFIG(itemviews)
   case CE_ItemViewItem: {
     auto ivopt = qstyleoption_cast<const QStyleOptionViewItem*>(option);
@@ -3287,16 +3287,15 @@ void PhantomStyle::drawComplexControl(ComplexControl control,
 
     QColor titleBarFrameBorder(active ? highlight.darker(180)
                                       : outline.darker(110));
-    QColor titleBarHighlight(active
-                                 ? highlight.lighter(120)
-                                 : palette.background().color().lighter(120));
+    QColor titleBarHighlight(active ? highlight.lighter(120)
+                                    : palette.window().color().lighter(120));
     QColor textColor(active ? 0xffffff : 0xff000000);
     QColor textAlphaColor(active ? 0xffffff : 0xff000000);
 
     {
       // Fill title
       QColor titlebarColor =
-          QColor(active ? highlight : palette.background().color());
+          QColor(active ? highlight : palette.window().color());
       painter->fillRect(option->rect.adjusted(1, 1, -1, 0), titlebarColor);
       // Frame and rounded corners
       painter->setPen(titleBarFrameBorder);
@@ -3457,7 +3456,6 @@ void PhantomStyle::drawComplexControl(ComplexControl control,
       QRect normalButtonRect = proxy()->subControlRect(
           CC_TitleBar, titleBar, SC_TitleBarNormalButton, widget);
       if (normalButtonRect.isValid()) {
-
         bool hover = (titleBar->activeSubControls & SC_TitleBarNormalButton) &&
                      (titleBar->state & State_MouseOver);
         bool sunken = (titleBar->activeSubControls & SC_TitleBarNormalButton) &&
@@ -4449,12 +4447,12 @@ QSize PhantomStyle::sizeFromContents(ContentsType type,
     bool nullIcon = hdr->icon.isNull();
     int margin = proxy()->pixelMetric(QStyle::PM_HeaderMargin, hdr, widget);
     int iconSize = nullIcon ? 0 : option->fontMetrics.height();
-    QSize txt = hdr->fontMetrics.size(
-        Qt::TextSingleLine | Qt::TextBypassShaping, hdr->text);
+    int txtSize =
+        hdr->fontMetrics.horizontalAdvance(hdr->text, Qt::TextSingleLine);
     QSize sz;
-    sz.setHeight(margin + qMax(iconSize, txt.height()) + margin);
+    sz.setHeight(margin + qMax(iconSize, hdr->fontMetrics.height()) + margin);
     sz.setWidth((nullIcon ? 0 : margin) + iconSize +
-                (hdr->text.isNull() ? 0 : margin) + txt.width() + margin);
+                (hdr->text.isNull() ? 0 : margin) + txtSize + margin);
     if (hdr->sortIndicator != QStyleOptionHeader::None) {
       if (hdr->orientation == Qt::Horizontal)
         sz.rwidth() += sz.height() + margin;
@@ -4977,7 +4975,7 @@ int PhantomStyle::styleHint(StyleHint hint, const QStyleOption* option,
   case SH_PrintDialog_RightAlignButtons:
   case SH_FontDialog_SelectAssociatedText:
   case SH_ComboBox_ListMouseTracking:
-  case SH_ScrollBar_StopMouseOverSlider:
+  case SH_Slider_StopMouseOverSlider:
   case SH_ScrollBar_MiddleClickAbsolutePosition:
   case SH_TitleBar_AutoRaise:
   case SH_TitleBar_NoBorder:

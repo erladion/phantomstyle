@@ -1,4 +1,3 @@
-#include "phantomstyle.h"
 #include <QAction>
 #include <QBoxLayout>
 #include <QCheckBox>

@@ -1,6 +1,6 @@
 #ifndef PHANTOMSTYLEPLUGIN_H
 #define PHANTOMSTYLEPLUGIN_H
-#include <QtWidgets/qstyleplugin.h>
+#include <QStylePlugin>
 
 class PhantomStylePlugin : public QStylePlugin {
   Q_OBJECT

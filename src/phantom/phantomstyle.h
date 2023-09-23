@@ -1,6 +1,6 @@
 #ifndef PHANTOMSTYLE_H
 #define PHANTOMSTYLE_H
-#include <QtWidgets/qcommonstyle.h>
+#include <QCommonStyle>
 
 class PhantomStylePrivate;
 class PhantomStyle : public QCommonStyle {

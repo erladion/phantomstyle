@@ -1,5 +1,5 @@
 #pragma once
-#include <QtWidgets/qapplication.h>
+#include <QApplication>
 
 class PhTestApp : public QApplication {
 public:

@@ -1,7 +1,6 @@
 #include "phantomcolor.h"
+#include <cfloat>
 #include <cmath>
-#include <float.h>
-#include <math.h>
 
 /*
  * HSLuv-C: Human-friendly HSL

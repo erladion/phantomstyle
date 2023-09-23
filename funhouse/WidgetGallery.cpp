@@ -54,7 +54,6 @@
 #include <QToolButton>
 #include <QtWidgets>
 
-//! [0]
 WidgetGallery::WidgetGallery(QWidget* parent) : QWidget(parent) {
   originalPalette = QApplication::palette();
 
@@ -78,27 +77,22 @@ WidgetGallery::WidgetGallery(QWidget* parent) : QWidget(parent) {
   createBottomLeftTabWidget();
   createBottomRightGroupBox();
   createProgressBar();
-  //! [0]
 
-  //! [1]
-  connect(styleComboBox, SIGNAL(activated(QString)),
-          //! [1] //! [2]
-          this, SLOT(changeStyle(QString)));
-  connect(useStylePaletteCheckBox, SIGNAL(toggled(bool)), this,
-          SLOT(changePalette()));
-  connect(disableWidgetsCheckBox, SIGNAL(toggled(bool)), topLeftGroupBox,
-          SLOT(setDisabled(bool)));
-  connect(disableWidgetsCheckBox, SIGNAL(toggled(bool)), topRightGroupBox,
-          SLOT(setDisabled(bool)));
-  connect(disableWidgetsCheckBox, SIGNAL(toggled(bool)), bottomLeftTabWidget,
-          SLOT(setDisabled(bool)));
-  connect(disableWidgetsCheckBox, SIGNAL(toggled(bool)), bottomRightGroupBox,
-          SLOT(setDisabled(bool)));
-  //! [2]
+  connect(styleComboBox, &QComboBox::textActivated, this,
+          &WidgetGallery::changeStyle);
+  connect(useStylePaletteCheckBox, &QCheckBox::toggled, this,
+          &WidgetGallery::changePalette);
 
-  //! [3]
+  connect(disableWidgetsCheckBox, &QCheckBox::toggled, topLeftGroupBox,
+          &WidgetGallery::setDisabled);
+  connect(disableWidgetsCheckBox, &QCheckBox::toggled, topRightGroupBox,
+          &WidgetGallery::setDisabled);
+  connect(disableWidgetsCheckBox, &QCheckBox::toggled, bottomLeftTabWidget,
+          &WidgetGallery::setDisabled);
+  connect(disableWidgetsCheckBox, &QCheckBox::toggled, bottomRightGroupBox,
+          &WidgetGallery::setDisabled);
+
   QHBoxLayout* topLayout = new QHBoxLayout;
-  //! [3] //! [4]
   topLayout->addWidget(styleLabel);
   topLayout->addWidget(styleComboBox);
   topLayout->addStretch(1);
@@ -121,12 +115,8 @@ WidgetGallery::WidgetGallery(QWidget* parent) : QWidget(parent) {
   setWindowTitle(tr("Styles"));
   // changeStyle("Phantom");
 }
-//! [4]
 
-//! [5]
-void WidgetGallery::changeStyle(const QString& styleName)
-//! [5] //! [6]
-{
+void WidgetGallery::changeStyle(const QString& styleName) {
   if (styleName == "Phantom") {
     QApplication::setStyle(new PhantomStyle);
   } else if (styleName == "Common") {
@@ -136,33 +126,21 @@ void WidgetGallery::changeStyle(const QString& styleName)
   }
   changePalette();
 }
-//! [6]
 
-//! [7]
-void WidgetGallery::changePalette()
-//! [7] //! [8]
-{
+void WidgetGallery::changePalette() {
   if (useStylePaletteCheckBox->isChecked())
     QApplication::setPalette(QApplication::style()->standardPalette());
   else
     QApplication::setPalette(originalPalette);
 }
-//! [8]
 
-//! [9]
-void WidgetGallery::advanceProgressBar()
-//! [9] //! [10]
-{
+void WidgetGallery::advanceProgressBar() {
   // int curVal = progressBar->value();
   // int maxVal = progressBar->maximum();
   // progressBar->setValue(curVal + (maxVal - curVal) / 100);
 }
-//! [10]
 
-//! [11]
-void WidgetGallery::createTopLeftGroupBox()
-//! [11] //! [12]
-{
+void WidgetGallery::createTopLeftGroupBox() {
   topLeftGroupBox = new QGroupBox(tr("Group 1"));
 
   radioButton1 = new QRadioButton(tr("Radio button 1"));
@@ -184,7 +162,6 @@ void WidgetGallery::createTopLeftGroupBox()
   layout->addStretch(1);
   topLeftGroupBox->setLayout(layout);
 }
-//! [12]
 
 void WidgetGallery::createTopRightGroupBox() {
   topRightGroupBox = new QGroupBox(tr("Group 2"));
@@ -221,7 +198,7 @@ void WidgetGallery::createBottomLeftTabWidget() {
   tableWidget->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
 
   QHBoxLayout* tab1hbox = new QHBoxLayout;
-  tab1hbox->setMargin(5);
+  tab1hbox->setContentsMargins(5, 5, 5, 5);
   tab1hbox->addWidget(tableWidget);
   tab1->setLayout(tab1hbox);
 
@@ -236,7 +213,7 @@ void WidgetGallery::createBottomLeftTabWidget() {
                             "How I wonder what you are!\n"));
 
   QHBoxLayout* tab2hbox = new QHBoxLayout;
-  tab2hbox->setMargin(5);
+  tab2hbox->setContentsMargins(5, 5, 5, 5);
   tab2hbox->addWidget(textEdit);
   tab2->setLayout(tab2hbox);
 
@@ -278,8 +255,7 @@ void WidgetGallery::createBottomRightGroupBox() {
   QStyleOption opt;
   opt.initFrom(this);
   auto withIcon = new QToolButton;
-  withIcon->setIcon(
-      style()->standardIcon(QStyle::SP_ComputerIcon, &opt, this));
+  withIcon->setIcon(style()->standardIcon(QStyle::SP_ComputerIcon, &opt, this));
 
   auto hbox = new QHBoxLayout;
   hbox->addWidget(toolButton);
@@ -305,14 +281,12 @@ void WidgetGallery::createBottomRightGroupBox() {
           [this](int val) { progressBar->setValue(val); });
 }
 
-//! [13]
 void WidgetGallery::createProgressBar() {
   progressBar = new QProgressBar;
   progressBar->setRange(0, 100);
   progressBar->setValue(40);
 
   QTimer* timer = new QTimer(this);
-  connect(timer, SIGNAL(timeout()), this, SLOT(advanceProgressBar()));
+  connect(timer, &QTimer::timeout, this, &WidgetGallery::advanceProgressBar);
   timer->start(1000);
 }
-//! [13]
